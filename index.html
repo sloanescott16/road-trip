@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Road Trip Planner: Texas to New Mexico Loop</title>
+<meta name="description" content="A no-backtracking road trip loop: Dallas, Lubbock, White Sands, hot springs, Albuquerque, Santa Fe, Red River.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root{--bg:#fbf4e8;--card:#fffaf1;--ink:#3a2c20;--muted:#7a6753;--accent:#b5522b;--line:#e8d8bd;--warn:#a3341c;}
+*{box-sizing:border-box}
+html{color-scheme:light;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:720px;margin:0 auto;padding:16px 14px 40px}
+h1{font-size:1.6rem;line-height:1.2;margin:8px 0 10px}
+h2{font-size:1.25rem;margin:0 0 6px}
+h3{font-size:1.05rem;margin:0 0 4px}
+p{margin:0 0 10px}
+a{color:var(--accent)}
+.map{position:relative;z-index:0;isolation:isolate;height:360px;width:100%;border-radius:12px;border:1px solid var(--line);margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px;overflow-wrap:anywhere}
+.leg{scroll-margin-top:84px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 16px;overflow-wrap:anywhere}
+.num{display:inline-block;background:var(--accent);color:#fff;border-radius:50%;width:1.6em;height:1.6em;text-align:center;line-height:1.6em;font-size:.9rem;margin-right:6px}
+.addr{color:var(--muted);margin:0 0 8px}
+.tag{display:inline-block;background:var(--warn);color:#fff;font-weight:600;font-size:.8rem;border-radius:6px;padding:2px 8px;margin:0 0 8px}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btn{display:inline-block;padding:9px 14px;border-radius:8px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
+.btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+dl{margin:8px 0 0}
+dt{font-weight:600;font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:6px}
+dd{margin:0}
+.slots{margin-top:10px;border-top:1px dashed var(--line);padding-top:6px}
+.tbd{color:var(--muted);font-style:italic}
+.drive{background:#f3e3c6;border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.note{color:var(--muted);font-size:.95rem}
+nav{position:sticky;top:0;z-index:5000;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 14px}
+nav .in{max-width:720px;margin:0 auto;display:flex;flex-wrap:nowrap;gap:6px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+nav a{flex:none;white-space:nowrap;display:inline-block;padding:4px 10px;border:1px solid var(--accent);border-radius:999px;text-decoration:none;font-size:.85rem;font-weight:600;background:var(--card)}
+nav span{flex:none;font-size:.8rem;color:var(--muted);font-weight:600}
+footer{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
+.hs{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.pin-ws{background:#2f6f8f;border:2px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.pin-n{background:#b5522b;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;text-align:center;line-height:22px;font-weight:700;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.pin-n.closed{background:#8a8a8a}
+.pin-dot{background:#fffaf1;border:2px solid #b5522b;border-radius:50%;width:12px;height:12px}
+</style>
+</head>
+<body>
+<nav aria-label="Jump to a leg"><div class="in"><span>Jump to:</span><a href="#top">Map</a><a href="#leg1">1 Dallas</a><a href="#leg2">2 Lubbock</a><a href="#leg3">3 White Sands</a><a href="#leg4">4 Albuquerque and Santa Fe</a><a href="#leg5">5 Red River</a><a href="#leg6">6 Home</a></div></nav>
+<main>
+<h1 id="top">Road Trip Planner: Texas to New Mexico Loop</h1>
+<p>A loop with no backtracking: Dallas, Lubbock, White Sands and the hot springs, up through New Mexico to Red River, then home to Texas. Each leg below has its own card with spots to fill in.</p>
+<p><strong id="dates">Dates: to be decided</strong><br><strong id="length">Length: to be decided</strong></p>
+
+<div id="overview" class="map" role="region" aria-label="Map of the whole route"></div>
+<p class="note">The route line is approximate, not the road. The small hollow dots are the start in Conroe and the hot springs town on the way up through New Mexico.</p>
+<noscript><p class="note">The map and leg cards need JavaScript.</p></noscript>
+
+<div id="legs"></div>
+
+<!-- Hot springs section: moved into the White Sands leg by the script below. -->
+<div id="hs-src" hidden>
+<div class="hs">
+<h3>Hot springs near White Sands</h3>
+<p>There are no hot springs in or right by White Sands. The nearest public soaking is Truth or Consequences (T or C), NM, about 1 hr 45 min from the park via Las Cruces and I-25. All spots are private bathhouses that sell soaks to walk-ins, clustered within a few blocks downtown.</p>
+<div id="map" class="map" role="region" aria-label="Map of the hot springs"></div>
+<p class="note" style="margin:-6px 0 14px"><a href="#" id="toggle" hidden>Show White Sands</a></p>
+
+<section class="card" id="p1">
+<h3><span class="num">1</span>Riverbend Hot Springs</h3>
+<p class="addr">100 Austin St, Truth or Consequences, NM 87901</p>
+<p>Best for actual pools: outdoor shared pools on the Rio Grande, 95 to 108 F, plus private pools. Open to the public.</p>
+<dl>
+<dt>Hours</dt><dd>8am to 11pm, last soak 10pm</dd>
+<dt>Price</dt><dd>Shared pool pass about $40 Mon to Thu, $50 Fri to Sun for up to 2, plus $15 per extra person, 4 max.</dd>
+<dt>Ages</dt><dd>No young children (adult-focused, check age policy).</dd>
+<dt>Tip</dt><dd>Book ahead on weekends.</dd>
+</dl>
+<div class="links"><a class="btn" href="https://maps.apple.com/?q=Riverbend%20Hot%20Springs%2C%20100%20Austin%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901">Apple Maps</a><a class="btn alt" href="tel:+15758947625">575-894-7625</a><a class="btn alt" href="https://riverbendhotsprings.com">riverbendhotsprings.com</a></div>
+</section>
+
+<section class="card" id="p2">
+<h3><span class="num">2</span>Hoosier Hot Springs &amp; Inn</h3>
+<p class="addr">516 Austin St, Truth or Consequences, NM 87901</p>
+<p>Four private pools around 104 F, three outdoor plus the original 1937 indoor bath. Open to the public by reservation.</p>
+<dl>
+<dt>Hours</dt><dd>9am to 9pm, last soak 8pm</dd>
+<dt>Price</dt><dd>$30 to $40 per hour for 1 or 2 people.</dd>
+<dt>Ages</dt><dd>Adults only, 18+.</dd>
+</dl>
+<div class="links"><a class="btn" href="https://maps.apple.com/?q=Hoosier%20Hot%20Springs%20%26%20Inn%2C%20516%20Austin%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901">Apple Maps</a><a class="btn alt" href="https://hoosierhotsprings.com">hoosierhotsprings.com</a></div>
+</section>
+
+<section class="card" id="p3">
+<h3><span class="num">3</span>Sierra Grande, a Ted Turner Retreat</h3>
+<p class="addr">501 McAdoo St, Truth or Consequences, NM 87901</p>
+<p>Upscale spa with private indoor baths up to about 107 F. Walk-ins welcome.</p>
+<dl>
+<dt>Hours</dt><dd>Walk-ins: weekends and high season 8am to 5pm, weekdays and off-season 8am to 7 or 8pm.</dd>
+<dt>Price</dt><dd>$30 first person, $5 each additional person 12 and up.</dd>
+<dt>Ages</dt><dd>No age limit.</dd>
+</dl>
+<div class="links"><a class="btn" href="https://maps.apple.com/?q=Sierra%20Grande%20Lodge%20and%20Spa%2C%20501%20McAdoo%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901">Apple Maps</a><a class="btn alt" href="tel:+18772887637">877-288-7637</a></div>
+</section>
+
+<section class="card" id="p4">
+<h3><span class="num">4</span>Artesian Bath House &amp; Trailer Court</h3>
+<p class="addr">312 Marr St, Truth or Consequences, NM 87901</p>
+<p>Old-school budget bathhouse open since 1930, private ceramic tubs around 108 F. Open to the public.</p>
+<div class="links"><a class="btn" href="https://maps.apple.com/?q=Artesian%20Bath%20House%2C%20312%20Marr%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901">Apple Maps</a></div>
+</section>
+
+<section class="card" id="p5">
+<h3><span class="num">5</span>La Paloma Hot Springs &amp; Spa</h3>
+<span class="tag">May be closed</span>
+<p class="addr">311 Marr St, Truth or Consequences, NM 87901</p>
+<p>Stone-bottomed natural pools, normally sells day soaks, but recent reviews say it has been closed. Call before going.</p>
+<div class="links"><a class="btn" href="https://maps.apple.com/?q=La%20Paloma%20Hot%20Springs%2C%20311%20Marr%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901">Apple Maps</a></div>
+</section>
+
+<section class="drive">
+<h3>Driving from White Sands</h3>
+<p>From the White Sands Visitor Center, 19955 US-70, Alamogordo, NM 88310, to Riverbend Hot Springs. About 1 hr 45 min.</p>
+<div class="links"><a class="btn" href="https://maps.apple.com/?saddr=19955%20US-70%2C%20Alamogordo%2C%20NM%2088310&amp;daddr=100%20Austin%20St%2C%20Truth%20or%20Consequences%2C%20NM%2087901&amp;dirflg=d">Directions in Apple Maps</a></div>
+</section>
+
+<p class="note">Fire Water Lodge and Hot Springs Glamp Camp are guests-only, no day soaks. Free primitive springs (Turkey Creek, Jordan, San Francisco) are in the Gila National Forest, much farther and need a hike.</p>
+<p class="note">The Artesian pin is approximate.</p>
+</div>
+</div>
+
+<footer>
+<p class="note"><strong>Prices and hours are as of October 2026. Check before you go.</strong></p>
+<p class="note">Map data from OpenStreetMap contributors.</p>
+</footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ==========================================================
+   EDIT HERE. This one block holds everything you fill in.
+   - TRIP.dates and TRIP.length: replace "to be decided".
+   - For each leg, change lodging, food and ideas.
+     Each is a list of short lines, for example:
+       lodging: ["Hotel name, 2 nights"],
+       food: ["Breakfast place", "BBQ stop"],
+       ideas: ["Walk the campus"]
+     An empty list [] shows "To be decided".
+   - Leave id, n, ll (map position), place and from alone unless a place changes.
+   ========================================================== */
+var TRIP = { dates: "to be decided", length: "to be decided" };
+var LEGS = [
+ { id:"leg1", n:1, title:"Start in Dallas", ll:[32.7762719,-96.7968559],
+   what:"One traveller comes up from Conroe, TX and the other is already in Dallas. We meet in Dallas to begin.",
+   place:"Dallas, TX", from:"Conroe, TX", fromLabel:"Driving from Conroe to Dallas",
+   lodging:[], food:[], ideas:[] },
+ { id:"leg2", n:2, title:"Lubbock, TX", ll:[33.5937526,-101.8995955],
+   what:"Both of us went to Texas Tech, so this is a chance to revisit the old stomping grounds on campus and around town.",
+   place:"Texas Tech University, Lubbock, TX", from:"Dallas, TX", fromLabel:"Driving from Dallas",
+   lodging:[], food:[], ideas:[] },
+ { id:"leg3", n:3, title:"White Sands National Park and the hot springs", ll:[32.779667,-106.172305],
+   what:"White Sands National Park, NM, then the Truth or Consequences hot springs on the way north. Details and a map of the five bathhouses are below.",
+   place:"White Sands National Park Visitor Center, 19955 US-70, Alamogordo, NM 88310", from:"Lubbock, TX", fromLabel:"Driving from Lubbock",
+   lodging:[], food:[], ideas:[], hotsprings:true },
+ { id:"leg4", n:4, title:"Albuquerque and Santa Fe, NM", ll:[35.0841034,-106.650985],
+   what:"Up through New Mexico. First Albuquerque, then Santa Fe a little further along the same road.",
+   place:"Albuquerque, NM", from:"Truth or Consequences, NM", fromLabel:"Driving from Truth or Consequences",
+   extra:{ place:"Santa Fe, NM", from:"Albuquerque, NM", label:"Santa Fe", fromLabel:"Driving from Albuquerque to Santa Fe", ll:[35.6876096,-105.938456] },
+   lodging:[], food:[], ideas:[] },
+ { id:"leg5", n:5, title:"Red River, NM", ll:[36.7094826,-105.407563],
+   what:"Our family base and the usual hub. We stay at a family condo here.",
+   place:"Red River, NM", from:"Santa Fe, NM", fromLabel:"Driving from Santa Fe",
+   lodging:["Family condo"], food:[], ideas:[] },
+ { id:"leg6", n:6, title:"Home to Texas", ll:null,
+   what:"The drive home to Texas. The end point is undecided, so this is a placeholder.",
+   place:null, from:null,
+   lodging:[], food:[], ideas:[] }
+];
+/* WAYPOINTS: small unnumbered dots on the route line. */
+var START_EXTRA = { name:"Conroe, TX (start)", ll:[30.3118769,-95.4560512] };
+var TOC = { name:"Truth or Consequences, NM (hot springs)", ll:[33.1275,-107.2538] };
+/* ============ end of edit block ============ */
+
+function am(q){return "https://maps.apple.com/?q="+encodeURIComponent(q);}
+function drive(s,d){return "https://maps.apple.com/?saddr="+encodeURIComponent(s)+"&daddr="+encodeURIComponent(d)+"&dirflg=d";}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+function slot(label,arr){
+ var h='<dt>'+label+'</dt><dd>';
+ if(arr&&arr.length){h+='<ul style="margin:0;padding-left:20px">'+arr.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ul>';}
+ else{h+='<span class="tbd">To be decided</span>';}
+ return h+'</dd>';
+}
+document.getElementById("dates").textContent="Dates: "+TRIP.dates;
+document.getElementById("length").textContent="Length: "+TRIP.length;
+
+var box=document.getElementById("legs");
+LEGS.forEach(function(L){
+ var s=document.createElement("section");s.className="leg";s.id=L.id;
+ var h='<h2><span class="num">'+L.n+'</span>'+esc(L.title)+'</h2><p>'+esc(L.what)+'</p>';
+ if(L.place){
+  h+='<div class="links"><a class="btn" href="'+am(L.place)+'">Apple Maps</a>';
+  if(L.from){h+='<a class="btn alt" href="'+drive(L.from,L.place)+'">'+esc(L.fromLabel)+'</a>';}
+  h+='</div>';
+ }
+ if(L.extra){
+  h+='<div class="links"><a class="btn" href="'+am(L.extra.place)+'">Apple Maps: '+esc(L.extra.label)+'</a><a class="btn alt" href="'+drive(L.extra.from,L.extra.place)+'">'+esc(L.extra.fromLabel)+'</a></div>';
+ }
+ h+='<div class="slots"><dl>'+slot("Lodging",L.lodging)+slot("Food",L.food)+slot("Ideas",L.ideas)+'</dl></div>';
+ s.innerHTML=h;
+ if(L.hotsprings){s.appendChild(document.getElementById("hs-src").firstElementChild);}
+ box.appendChild(s);
+});
+document.getElementById("hs-src").remove();
+
+(function(){
+if(typeof L==="undefined"){document.getElementById("overview").style.display="none";document.getElementById("map").style.display="none";return;}
+function tiles(m){L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(m);}
+function popup(name,q){
+ var d=document.createElement("div");
+ var b=document.createElement("strong");b.textContent=name;d.appendChild(b);
+ d.appendChild(document.createElement("br"));
+ var a=document.createElement("a");a.href=q;a.textContent="Open in Apple Maps";d.appendChild(a);
+ return d;
+}
+/* ---- overview map ---- */
+var om=L.map("overview",{scrollWheelZoom:false});tiles(om);
+var path=[],all=[];
+function numPin(n,ll,name,q,cls){ /* pin 4 and 4b are nudged apart so they do not touch */
+ var icon=L.divIcon({className:"",html:'<div class="pin-n'+(cls||"")+'">'+n+'</div>',iconSize:[26,26],iconAnchor:[13,n===4?0:13],popupAnchor:[0,-13]});
+ L.marker(ll,{icon:icon,title:name}).addTo(om).bindPopup(popup(name,q));
+}
+function dot(ll,name){
+ var icon=L.divIcon({className:"",html:'<div class="pin-dot"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+ L.marker(ll,{icon:icon,title:name,interactive:false}).addTo(om);
+}
+dot(START_EXTRA.ll,START_EXTRA.name);
+L.polyline([START_EXTRA.ll,LEGS[0].ll],{color:"#b5522b",weight:3,opacity:.7,dashArray:"6 6"}).addTo(om);
+all.push(START_EXTRA.ll);
+LEGS.forEach(function(g){
+ if(!g.ll)return;
+ numPin(g.n,g.ll,g.title,am(g.place));
+ path.push(g.ll);all.push(g.ll);
+ if(g.n===3){path.push(TOC.ll);dot(TOC.ll,TOC.name);all.push(TOC.ll);}
+ if(g.extra){path.push(g.extra.ll);all.push(g.extra.ll);
+  var icon=L.divIcon({className:"",html:'<div class="pin-n">4b</div>',iconSize:[26,26],iconAnchor:[13,26],popupAnchor:[0,-13]});
+  L.marker(g.extra.ll,{icon:icon,title:g.extra.label}).addTo(om).bindPopup(popup(g.extra.label,am(g.extra.place)));}
+});
+L.polyline(path,{color:"#b5522b",weight:3,opacity:.8}).addTo(om);
+om.fitBounds(all,{padding:[24,24]});
+
+/* ---- hot springs map ---- */
+var places=[
+ {n:1,name:"Riverbend Hot Springs",ll:[33.127538,-107.250716],q:"Riverbend Hot Springs, 100 Austin St, Truth or Consequences, NM 87901"},
+ {n:2,name:"Hoosier Hot Springs & Inn",ll:[33.127584,-107.256193],q:"Hoosier Hot Springs & Inn, 516 Austin St, Truth or Consequences, NM 87901"},
+ {n:3,name:"Sierra Grande",ll:[33.1295,-107.255795],q:"Sierra Grande Lodge and Spa, 501 McAdoo St, Truth or Consequences, NM 87901"},
+ {n:4,name:"Artesian Bath House",ll:[33.12655,-107.25340],q:"Artesian Bath House, 312 Marr St, Truth or Consequences, NM 87901"},
+ {n:5,name:"La Paloma Hot Springs (may be closed)",ll:[33.127049,-107.253149],q:"La Paloma Hot Springs, 311 Marr St, Truth or Consequences, NM 87901",closed:true}
+];
+var ws={name:"White Sands Visitor Center",ll:[32.779667,-106.172305],q:"White Sands National Park Visitor Center, 19955 US-70, Alamogordo, NM 88310"};
+var map=L.map("map",{scrollWheelZoom:false});tiles(map);
+var pts=[];
+places.forEach(function(p){
+ var icon=L.divIcon({className:"",html:'<div class="pin-n'+(p.closed?" closed":"")+'">'+p.n+'</div>',iconSize:[26,26],iconAnchor:[13,13],popupAnchor:[0,-13]});
+ L.marker(p.ll,{icon:icon,title:p.name}).addTo(map).bindPopup(popup(p.name,am(p.q)));
+ pts.push(p.ll);
+});
+var wsIcon=L.divIcon({className:"",html:'<div class="pin-ws"></div>',iconSize:[18,18],iconAnchor:[9,9],popupAnchor:[0,-9]});
+L.marker(ws.ll,{icon:wsIcon,title:ws.name}).addTo(map).bindPopup(popup(ws.name,am(ws.q)));
+function fitSprings(){map.fitBounds(pts,{padding:[18,18],maxZoom:18});}
+fitSprings();
+var tg=document.getElementById("toggle"),showAll=false;
+tg.hidden=false;
+tg.addEventListener("click",function(e){e.preventDefault();showAll=!showAll;if(showAll){map.fitBounds(pts.concat([ws.ll]),{padding:[30,30]});tg.textContent="Back to the hot springs";}else{fitSprings();tg.textContent="Show White Sands";}});
+})();
+</script>
+</body>
+</html>
