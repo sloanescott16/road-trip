@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
+<meta name="referrer" content="no-referrer">
+<!-- Trip server address: set at deploy in BOTH this tag and connect-src in the policy below (see worker/README.md). The local test server swaps it for its own address. -->
+<meta name="trip-api" content="https://road-trip-planner.sloanescott16.workers.dev">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://road-trip-planner.sloanescott16.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Road Trip Planner: Texas to New Mexico Loop</title>
 <meta name="description" content="A no-backtracking road trip loop: Dallas, Lubbock, White Sands, hot springs, Albuquerque, Santa Fe, Red River.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -44,18 +48,68 @@ footer{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
 .pin-n{background:#b5522b;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;text-align:center;line-height:22px;font-weight:700;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .pin-n.closed{background:#8a8a8a}
 .pin-dot{background:#fffaf1;border:2px solid #b5522b;border-radius:50%;width:12px;height:12px}
+/* collaborative parts */
+.bar{background:#f3e3c6;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 14px;font-size:.95rem}
+.bar .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .who{font-weight:600;margin-right:auto}
+.sync{color:var(--muted);font-size:.85rem;margin-top:4px}
+.msg{color:var(--warn);font-weight:600;margin-top:4px}
+.msg:empty{display:none}
+button,.b{font:inherit;font-size:.9rem;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--accent);background:var(--card);color:var(--accent);cursor:pointer;min-height:36px}
+button.p{background:var(--accent);color:#fff}
+button.sm{font-size:.8rem;padding:4px 9px;min-height:30px}
+button.on{background:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:inherit;font-size:16px;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+textarea{min-height:64px;resize:vertical}
+label{display:block;font-size:.85rem;font-weight:600;color:var(--muted);margin:6px 0 2px}
+.plan{margin-top:12px;border-top:1px dashed var(--line);padding-top:8px}
+.group h4{margin:10px 0 4px;font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.it,.ch{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin:0 0 8px}
+.it.dec,.opt.dec{border-color:#3d7a3a;box-shadow:inset 3px 0 0 #3d7a3a}
+.it .t{font-weight:600}
+.it .n{white-space:pre-wrap;margin:4px 0 0}
+.by{color:var(--muted);font-size:.8rem;margin-top:4px}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.badge{display:inline-block;background:#3d7a3a;color:#fff;font-size:.75rem;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.kind{display:inline-block;background:#f3e3c6;color:var(--ink);font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;margin-right:6px;text-transform:uppercase;vertical-align:middle}
+.ch h4{margin:0 0 6px;font-size:1rem}
+.opt{border:1px solid var(--line);border-radius:8px;padding:8px;margin:0 0 6px;background:var(--card)}
+.opt .l{font-weight:600}
+.voters{color:var(--muted);font-size:.8rem}
+details.add{margin-top:8px}
+details.add summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6px 0}
+.ro .acts,.ro details.add,.ro .addopt{display:none}
+.base{color:var(--ink);margin:4px 0 8px}
 </style>
 </head>
 <body>
-<nav aria-label="Jump to a leg"><div class="in"><span>Jump to:</span><a href="#top">Map</a><a href="#leg1">1 Dallas</a><a href="#leg2">2 Lubbock</a><a href="#leg3">3 White Sands</a><a href="#leg4">4 Albuquerque and Santa Fe</a><a href="#leg5">5 Red River</a><a href="#leg6">6 Home</a></div></nav>
+<nav aria-label="Jump to a leg"><div class="in"><span>Jump to:</span><a href="#top">Map</a><a href="#decide">Choices</a><a href="#leg1">1 Dallas</a><a href="#leg2">2 Lubbock</a><a href="#leg3">3 White Sands</a><a href="#leg4">4 Albuquerque and Santa Fe</a><a href="#leg5">5 Red River</a><a href="#leg6">6 Home</a></div></nav>
 <main>
 <h1 id="top">Road Trip Planner: Texas to New Mexico Loop</h1>
-<p>A loop with no backtracking: Dallas, Lubbock, White Sands and the hot springs, up through New Mexico to Red River, then home to Texas. Each leg below has its own card with spots to fill in.</p>
-<p><strong id="dates">Dates: to be decided</strong><br><strong id="length">Length: to be decided</strong></p>
+<p>A loop with no backtracking: Dallas, Lubbock, White Sands and the hot springs, up through New Mexico to Red River, then home to Texas. Add stops, places to stay, food, ideas, notes and links to any leg, and vote on the choices.</p>
+
+<div class="bar" id="bar">
+ <div id="ro-line" hidden>This is the read-only plan. Ask for the trip link to add things and vote.</div>
+ <div id="name-form" hidden>
+  <label for="name-in">Your first name (shown on what you add)</label>
+  <div class="row"><input id="name-in" maxlength="40" autocomplete="given-name" style="flex:1;min-width:0"><button class="p" id="name-save">Save</button></div>
+ </div>
+ <div id="me-line" class="row" hidden><span class="who" id="me"></span><button class="sm" id="name-change">Change name</button><button class="sm" id="refresh">Refresh</button><button class="sm" id="copy">Copy trip link</button></div>
+ <div class="sync" id="sync"></div>
+ <div class="msg" id="msg" role="status"></div>
+</div>
+
 
 <div id="overview" class="map" role="region" aria-label="Map of the whole route"></div>
 <p class="note">The route line is approximate, not the road. The small hollow dots are the start in Conroe and the hot springs town on the way up through New Mexico.</p>
 <noscript><p class="note">The map and leg cards need JavaScript.</p></noscript>
+
+<section class="leg" id="decide">
+<h2>Big choices</h2>
+<p class="note">Vote for what you like. When we agree, mark one Decided.</p>
+<div class="plan" id="plan-trip"></div>
+</section>
 
 <div id="legs"></div>
 
@@ -131,68 +185,56 @@ footer{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
 </div>
 
 <footer>
-<p class="note"><strong>Prices and hours are as of October 2026. Check before you go.</strong></p>
+<p class="note"><strong>Prices and hours as of October 2026, check before you go.</strong></p>
 <p class="note">Map data from OpenStreetMap contributors.</p>
 </footer>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 /* ==========================================================
-   EDIT HERE. This one block holds everything you fill in.
-   - TRIP.dates and TRIP.length: replace "to be decided".
-   - For each leg, change lodging, food and ideas.
-     Each is a list of short lines, for example:
-       lodging: ["Hotel name, 2 nights"],
-       food: ["Breakfast place", "BBQ stop"],
-       ideas: ["Walk the campus"]
-     An empty list [] shows "To be decided".
+   BUILT-IN PLAN. The fixed route, shown to everyone, even without the trip link.
+   Things to add, votes and choices live on the shared trip server, not here.
    - Leave id, n, ll (map position), place and from alone unless a place changes.
+   - base: an optional fixed line shown on the leg (no addresses, no money).
+   - SEED: the starting choices. Keep in step with SEED in worker/worker.js.
    ========================================================== */
-var TRIP = { dates: "to be decided", length: "to be decided" };
 var LEGS = [
  { id:"leg1", n:1, title:"Start in Dallas", ll:[32.7762719,-96.7968559],
    what:"One traveller comes up from Conroe, TX and the other is already in Dallas. We meet in Dallas to begin.",
-   place:"Dallas, TX", from:"Conroe, TX", fromLabel:"Driving from Conroe to Dallas",
-   lodging:[], food:[], ideas:[] },
+   place:"Dallas, TX", from:"Conroe, TX", fromLabel:"Driving from Conroe to Dallas", },
  { id:"leg2", n:2, title:"Lubbock, TX", ll:[33.5937526,-101.8995955],
    what:"Both of us went to Texas Tech, so this is a chance to revisit the old stomping grounds on campus and around town.",
-   place:"Texas Tech University, Lubbock, TX", from:"Dallas, TX", fromLabel:"Driving from Dallas",
-   lodging:[], food:[], ideas:[] },
+   place:"Texas Tech University, Lubbock, TX", from:"Dallas, TX", fromLabel:"Driving from Dallas", },
  { id:"leg3", n:3, title:"White Sands National Park and the hot springs", ll:[32.779667,-106.172305],
    what:"White Sands National Park, NM, then the Truth or Consequences hot springs on the way north. Details and a map of the five bathhouses are below.",
    place:"White Sands National Park Visitor Center, 19955 US-70, Alamogordo, NM 88310", from:"Lubbock, TX", fromLabel:"Driving from Lubbock",
-   lodging:[], food:[], ideas:[], hotsprings:true },
+   hotsprings:true },
  { id:"leg4", n:4, title:"Albuquerque and Santa Fe, NM", ll:[35.0841034,-106.650985],
    what:"Up through New Mexico. First Albuquerque, then Santa Fe a little further along the same road.",
    place:"Albuquerque, NM", from:"Truth or Consequences, NM", fromLabel:"Driving from Truth or Consequences",
-   extra:{ place:"Santa Fe, NM", from:"Albuquerque, NM", label:"Santa Fe", fromLabel:"Driving from Albuquerque to Santa Fe", ll:[35.6876096,-105.938456] },
-   lodging:[], food:[], ideas:[] },
+   extra:{ place:"Santa Fe, NM", from:"Albuquerque, NM", label:"Santa Fe", fromLabel:"Driving from Albuquerque to Santa Fe", ll:[35.6876096,-105.938456] }, },
  { id:"leg5", n:5, title:"Red River, NM", ll:[36.7094826,-105.407563],
    what:"Our family base and the usual hub. We stay at a family condo here.",
    place:"Red River, NM", from:"Santa Fe, NM", fromLabel:"Driving from Santa Fe",
-   lodging:["Family condo"], food:[], ideas:[] },
+   base:"Base: the family condo." },
  { id:"leg6", n:6, title:"Home to Texas", ll:null,
-   what:"The drive home to Texas. The end point is undecided, so this is a placeholder.",
-   place:null, from:null,
-   lodging:[], food:[], ideas:[] }
+   what:"The drive home to Texas. Where we finish is one of the choices below.",
+   place:null, from:null, }
 ];
 /* WAYPOINTS: small unnumbered dots on the route line. */
 var START_EXTRA = { name:"Conroe, TX (start)", ll:[30.3118769,-95.4560512] };
 var TOC = { name:"Truth or Consequences, NM (hot springs)", ll:[33.1275,-107.2538] };
-/* ============ end of edit block ============ */
+var SEED = [
+ { id:"seed-length", leg:"trip", title:"Trip length", options:["5 days","7 days","9 days","10 to 12 days"] },
+ { id:"seed-dates", leg:"trip", title:"Dates", options:[] },
+ { id:"seed-end", leg:"leg6", title:"Final endpoint (home leg)", options:["Back to Dallas, TX","Down to Conroe, TX","Dallas, then one of us on to Conroe"] },
+ { id:"seed-springs", leg:"leg3", title:"Which hot springs", options:["Riverbend Hot Springs","Hoosier Hot Springs and Inn","Sierra Grande","Artesian Bath House","La Paloma Hot Springs (may be closed)"] }
+];
+/* ============ end of built-in plan ============ */
 
 function am(q){return "https://maps.apple.com/?q="+encodeURIComponent(q);}
 function drive(s,d){return "https://maps.apple.com/?saddr="+encodeURIComponent(s)+"&daddr="+encodeURIComponent(d)+"&dirflg=d";}
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
-function slot(label,arr){
- var h='<dt>'+label+'</dt><dd>';
- if(arr&&arr.length){h+='<ul style="margin:0;padding-left:20px">'+arr.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+'</ul>';}
- else{h+='<span class="tbd">To be decided</span>';}
- return h+'</dd>';
-}
-document.getElementById("dates").textContent="Dates: "+TRIP.dates;
-document.getElementById("length").textContent="Length: "+TRIP.length;
-
 var box=document.getElementById("legs");
 LEGS.forEach(function(L){
  var s=document.createElement("section");s.className="leg";s.id=L.id;
@@ -205,7 +247,8 @@ LEGS.forEach(function(L){
  if(L.extra){
   h+='<div class="links"><a class="btn" href="'+am(L.extra.place)+'">Apple Maps: '+esc(L.extra.label)+'</a><a class="btn alt" href="'+drive(L.extra.from,L.extra.place)+'">'+esc(L.extra.fromLabel)+'</a></div>';
  }
- h+='<div class="slots"><dl>'+slot("Lodging",L.lodging)+slot("Food",L.food)+slot("Ideas",L.ideas)+'</dl></div>';
+ if(L.base){h+='<p class="base">'+esc(L.base)+'</p>';}
+ h+='<div class="plan" id="plan-'+L.id+'"></div>';
  s.innerHTML=h;
  if(L.hotsprings){s.appendChild(document.getElementById("hs-src").firstElementChild);}
  box.appendChild(s);
@@ -271,6 +314,231 @@ fitSprings();
 var tg=document.getElementById("toggle"),showAll=false;
 tg.hidden=false;
 tg.addEventListener("click",function(e){e.preventDefault();showAll=!showAll;if(showAll){map.fitBounds(pts.concat([ws.ll]),{padding:[30,30]});tg.textContent="Back to the hot springs";}else{fitSprings();tg.textContent="Show White Sands";}});
+})();
+
+/* ==========================================================
+   SHARED PLAN. Talks to the trip server (worker/ in the project).
+   The trip key comes from the link: ...#trip=KEY. It is sent as a header,
+   never put in the address query, never stored by this page.
+   All text people type is shown with textContent, never as HTML.
+   ========================================================== */
+(function(){
+var API=(document.querySelector('meta[name="trip-api"]')||{}).content||"";
+var POLL_MS=45000;
+var KINDS=[["stop","Stops"],["lodging","Lodging"],["food","Food"],["activity","Activities"],["idea","Ideas"],["note","Notes"],["link","Links"]];
+var LEG_IDS=["trip"].concat(LEGS.map(function(l){return l.id;}));
+var LEG_NAMES={trip:"Whole trip"};LEGS.forEach(function(l){LEG_NAMES[l.id]=l.n+" "+l.title;});
+
+function frag(){var o={};(location.hash||"").replace(/^#/,"").split("&").forEach(function(p){var i=p.indexOf("=");if(i>0){o[decodeURIComponent(p.slice(0,i))]=decodeURIComponent(p.slice(i+1));}});return o;}
+var F=frag(),KEY=F.trip||"";
+if(/REPLACE_WITH/.test(API)){API="";} /* not deployed yet: read-only */
+var NAME_KEY="roadtrip.name";
+function myName(){try{return localStorage.getItem(NAME_KEY)||"";}catch(e){return "";}}
+var state=null,rev=null,busy=false,pending=false,live=!!(KEY&&API);
+/* do not redraw under someone's fingers: wait while a form is in use */
+function editing(){var a=document.activeElement;return !!(document.querySelector(".plan .it .form")||(a&&a.closest&&a.closest(".plan")&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.value));}
+
+/* keep #trip=... in the address: jump links scroll instead of changing the hash */
+document.addEventListener("click",function(e){
+ var a=e.target.closest&&e.target.closest('a[href^="#"]');
+ if(!a||a.id==="toggle")return;
+ var t=document.getElementById(a.getAttribute("href").slice(1));
+ if(t){e.preventDefault();t.scrollIntoView({behavior:"smooth",block:"start"});}
+});
+
+function $(id){return document.getElementById(id);}
+function el(tag,props,kids){
+ var n=document.createElement(tag);
+ if(props){for(var k in props){if(k==="cls")n.className=props[k];else if(k==="text")n.textContent=props[k];else if(k.slice(0,2)==="on")n.addEventListener(k.slice(2),props[k]);else if(k.indexOf("-")>0)n.setAttribute(k,props[k]);else n[k]=props[k];}}
+ (kids||[]).forEach(function(c){if(c)n.appendChild(typeof c==="string"?document.createTextNode(c):c);});
+ return n;
+}
+function safeLink(u){try{var x=new URL(u);return (x.protocol==="http:"||x.protocol==="https:")?x.href:"";}catch(e){return "";}}
+function say(t){$("msg").textContent=t||"";}
+function ago(ts){var s=Math.round((Date.now()-ts)/1000);return s<60?"just now":Math.round(s/60)+" min ago";}
+
+/* ---------- server calls ---------- */
+function api(method,path,body){
+ var h={"X-Trip-Key":KEY};if(body)h["Content-Type"]="application/json";
+ return fetch(API+path,{method:method,headers:h,body:body?JSON.stringify(body):undefined,cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer"}).then(function(r){
+  return r.json().catch(function(){return {};}).then(function(j){j._status=r.status;return j;});
+ });
+}
+var lastSync=0;
+function load(force){
+ if(!live)return Promise.resolve();
+ return api("GET","/state"+(rev!==null&&state?"?since="+rev:"")).then(function(j){
+  if(j._status===401){live=false;say("This trip link did not work. Ask for a fresh one.");setup();render();return;}
+  if(j._status!==200){say(j.error?"Server: "+j.error:"Could not load the shared plan.");return;}
+  lastSync=Date.now();rev=j.rev;
+  if(!j.unchanged){state=j;if(editing()&&!force)pending=true;else render();}
+  else if(force)render();
+  syncLine();
+ }).catch(function(){say("Could not reach the trip server. Showing what we had.");});
+}
+function syncLine(){$("sync").textContent=live?(lastSync?"Shared plan, updated "+ago(lastSync)+". Refreshes by itself every 45 seconds.":"Loading the shared plan..."):"";}
+function write(method,path,body){
+ pending=false;
+ if(busy)return Promise.resolve();
+ busy=true;say("Saving...");
+ return api(method,path,body).then(function(j){
+  busy=false;
+  if(j._status===409){say("Someone else changed that first. Showing the latest, try again.");}
+  else if(j._status>=400){say(j.error?"Not saved: "+j.error:"Not saved.");}
+  else say("");
+  return load(true).then(function(){return j;});
+ }).catch(function(){busy=false;say("Not saved: could not reach the trip server.");});
+}
+
+/* ---------- name and bar ---------- */
+function setup(){
+ $("ro-line").hidden=live;
+ var nm=myName();
+ $("name-form").hidden=!live||!!nm;
+ $("me-line").hidden=!live||!nm;
+ $("me").textContent=nm?"You are "+nm:"";
+ document.body.classList.toggle("ro",!live||!nm);
+ syncLine();
+}
+$("name-save").addEventListener("click",function(){
+ /* same clean-up as the server: NFKC, no invisible or direction characters */
+ var v=$("name-in").value;try{v=v.normalize("NFKC");}catch(e){}
+ v=v.replace(/[\u0000-\u001F\u007F-\u009F­؜᠎​-‏‪-‮⁠-⁯﻿]/g,"").replace(/\s+/g," ").trim().slice(0,40);
+ if(!v){say("Type a name first.");return;}
+ try{localStorage.setItem(NAME_KEY,v);}catch(e){}
+ say("");setup();render();
+});
+$("name-change").addEventListener("click",function(){$("name-in").value=myName();$("name-form").hidden=false;$("me-line").hidden=true;});
+$("refresh").addEventListener("click",function(){say("");load();});
+$("copy").addEventListener("click",function(){
+ var u=location.href;
+ if(navigator.clipboard){navigator.clipboard.writeText(u).then(function(){say("Trip link copied. Send it only to the people on the trip.");},function(){say("Copy did not work: copy the address from the browser bar.");});}
+ else say("Copy the address from the browser bar.");
+});
+
+/* ---------- data helpers ---------- */
+function data(){
+ if(state)return state;
+ var opts=[];SEED.forEach(function(s){s.options.forEach(function(l,i){opts.push({id:s.id+"."+(i+1),choice:s.id,label:l,seed:true});});});
+ return {items:[],choices:SEED.map(function(s){return {id:s.id,leg:s.leg,title:s.title,decided:null,version:0,seed:true};}),options:opts,votes:[]};
+}
+function votesFor(d,target){return d.votes.filter(function(v){return v.target===target;});}
+function iVoted(list){var me=myName().toLowerCase();return list.some(function(v){return v.name.toLowerCase()===me;});}
+
+function voteBtn(d,target){
+ var vs=votesFor(d,target),mine=iVoted(vs);
+ return el("button",{cls:"sm"+(mine?" on":""),text:(mine?"Voted ":"Vote ")+"("+vs.length+")","aria-pressed":String(mine),onclick:function(){write("POST","/votes",{target:target,name:myName(),on:!mine});}});
+}
+function voterLine(d,target){
+ var vs=votesFor(d,target);
+ return vs.length?el("div",{cls:"voters",text:"Votes: "+vs.map(function(v){return v.name;}).join(", ")}):null;
+}
+function removeBtn(fn){
+ var armed=false;
+ var b=el("button",{cls:"sm",text:"Remove",onclick:function(){if(!armed){armed=true;b.textContent="Tap again to remove";setTimeout(function(){armed=false;b.textContent="Remove";},4000);return;}fn();}});
+ return b;
+}
+
+/* ---------- items ---------- */
+function itemForm(leg,cur,done){
+ var ONE={stop:"Stop",lodging:"Lodging",food:"Food",activity:"Activity",idea:"Idea",note:"Note",link:"Link"};
+ var kind=el("select",{},KINDS.map(function(k){return el("option",{value:k[0],text:ONE[k[0]]});}));
+ kind.value=cur?cur.kind:"stop";
+ var text=el("input",{maxLength:200,placeholder:"What is it?",value:cur?cur.text:""});
+ var link=el("input",{maxLength:500,type:"url",placeholder:"https://...",value:cur?cur.link:""});
+ var note=el("textarea",{maxLength:1000,placeholder:"Optional note",value:cur?cur.note:""});
+ var save=el("button",{cls:"p",text:cur?"Save changes":"Add",onclick:function(){
+  var t=text.value.trim();if(!t){say("Type what it is first.");return;}
+  var l=link.value.trim();if(l&&!safeLink(l)){say("Links must start with http:// or https://");return;}
+  var body={kind:kind.value,text:t,link:l,note:note.value,by:myName()};
+  if(cur){body.version=cur.version;write("PUT","/items/"+encodeURIComponent(cur.id),body).then(done);}
+  else{body.leg=leg;write("POST","/items",body).then(function(j){if(j&&j._status===201){text.value="";link.value="";note.value="";}});}
+ }});
+ var kids=[el("label",{text:"Type"}),kind,el("label",{text:"What"}),text,el("label",{text:"Link (optional)"}),link,el("label",{text:"Note (optional)"}),note,el("div",{cls:"acts"},[save,cur?el("button",{cls:"sm",text:"Cancel",onclick:done}):null])];
+ return el("div",{cls:"form"},kids);
+}
+function itemCard(d,it){
+ var box=el("div",{cls:"it"+(it.decided?" dec":"")});
+ function show(){
+  box.textContent="";
+  var title=el("div",{},[el("span",{cls:"kind",text:it.kind}),el("span",{cls:"t",text:it.text}),it.decided?el("span",{cls:"badge",text:"Decided"}):null]);
+  box.appendChild(title);
+  if(it.note)box.appendChild(el("p",{cls:"n",text:it.note}));
+  var u=it.link&&safeLink(it.link);
+  if(u)box.appendChild(el("div",{},[el("a",{href:u,text:u,target:"_blank",rel:"noopener noreferrer"})]));
+  box.appendChild(el("div",{cls:"by",text:"Added by "+it.by+(it.editedBy&&it.editedBy!==it.by?", edited by "+it.editedBy:"")}));
+  var vl=voterLine(d,it.id);if(vl)box.appendChild(vl);
+  box.appendChild(el("div",{cls:"acts"},[
+   voteBtn(d,it.id),
+   el("button",{cls:"sm",text:it.decided?"Undo decided":"Mark decided",onclick:function(){write("PUT","/items/"+encodeURIComponent(it.id),{decided:!it.decided,by:myName(),version:it.version});}}),
+   el("button",{cls:"sm",text:"Edit",onclick:function(){box.textContent="";box.appendChild(itemForm(it.leg,it,show));}}),
+   removeBtn(function(){write("DELETE","/items/"+encodeURIComponent(it.id));})
+  ]));
+ }
+ show();
+ return box;
+}
+
+/* ---------- choices ---------- */
+function choiceCard(d,c){
+ var opts=d.options.filter(function(o){return o.choice===c.id;});
+ var dec=opts.filter(function(o){return o.id===c.decided;})[0];
+ var box=el("div",{cls:"ch",id:"choice-"+c.id},[el("h4",{},[c.title,dec?el("span",{cls:"badge",text:"Decided: "+dec.label}):null])]);
+ if(!opts.length)box.appendChild(el("p",{cls:"tbd",text:"No options yet. Add one below."}));
+ opts.forEach(function(o){
+  var isDec=o.id===c.decided;
+  var row=el("div",{cls:"opt"+(isDec?" dec":"")},[el("div",{cls:"l",text:o.label}),o.by?el("div",{cls:"by",text:"Added by "+o.by}):null,voterLine(d,o.id)]);
+  row.appendChild(el("div",{cls:"acts"},[
+   voteBtn(d,o.id),
+   el("button",{cls:"sm",text:isDec?"Undo decided":"Mark decided",onclick:function(){write("PUT","/choices/"+encodeURIComponent(c.id),{decided:isDec?null:o.id,by:myName(),version:c.version});}}),
+   o.seed?null:removeBtn(function(){write("DELETE","/options/"+encodeURIComponent(o.id));})
+  ]));
+  box.appendChild(row);
+ });
+ var inp=el("input",{maxLength:120,placeholder:"Add an option"});
+ box.appendChild(el("div",{cls:"acts addopt"},[inp,el("button",{cls:"sm p",text:"Add option",onclick:function(){var v=inp.value.trim();if(!v)return;write("POST","/choices/"+encodeURIComponent(c.id)+"/options",{label:v,by:myName()});}})]));
+ if(!c.seed&&String(c.id).indexOf("seed-")!==0)box.appendChild(el("div",{cls:"acts"},[el("span",{cls:"by",text:c.by?"Choice added by "+c.by:""}),removeBtn(function(){write("DELETE","/choices/"+encodeURIComponent(c.id));})]));
+ return box;
+}
+function choiceForm(leg){
+ var title=el("input",{maxLength:120,placeholder:"For example: where to eat in Santa Fe"});
+ var opts=el("textarea",{placeholder:"One option per line"});
+ return el("div",{},[el("label",{text:"Question"}),title,el("label",{text:"Options"}),opts,el("div",{cls:"acts"},[el("button",{cls:"p",text:"Add choice",onclick:function(){
+  var t=title.value.trim();if(!t){say("Type the question first.");return;}
+  var o=opts.value.split("\n").map(function(x){return x.trim();}).filter(Boolean).slice(0,12);
+  write("POST","/choices",{title:t,leg:leg,options:o,by:myName()}).then(function(j){if(j&&j._status===201){title.value="";opts.value="";}});
+ }})])]);
+}
+
+/* ---------- render ---------- */
+function render(){
+ var d=data();
+ LEG_IDS.forEach(function(leg){
+  var p=$("plan-"+leg);if(!p)return;
+  var open=[].map.call(p.querySelectorAll("details[open]"),function(x){return x.dataset.k;});
+  p.textContent="";
+  d.choices.filter(function(c){return c.leg===leg;}).forEach(function(c){p.appendChild(choiceCard(d,c));});
+  var items=d.items.filter(function(i){return i.leg===leg;});
+  KINDS.forEach(function(k){
+   var list=items.filter(function(i){return i.kind===k[0];}).sort(function(a,b){return (b.decided-a.decided)||(a.created-b.created);});
+   if(!list.length)return;
+   p.appendChild(el("div",{cls:"group"},[el("h4",{text:k[1]})].concat(list.map(function(i){return itemCard(d,i);}))));
+  });
+  if(leg!=="trip"&&!items.length)p.appendChild(el("p",{cls:"tbd",text:live?"Nothing added yet.":"Nothing added yet. Ask for the trip link to add things."}));
+  var a=el("details",{cls:"add"},[el("summary",{text:"Add to this "+(leg==="trip"?"trip":"leg")}),itemForm(leg)]);a.dataset.k="item";
+  var b=el("details",{cls:"add"},[el("summary",{text:"Add a choice to vote on"}),choiceForm(leg)]);b.dataset.k="choice";
+  if(open.indexOf("item")>=0)a.open=true;if(open.indexOf("choice")>=0)b.open=true;
+  p.appendChild(a);p.appendChild(b);
+ });
+}
+setup();render();
+if(live){
+ load();
+ setInterval(function(){if(document.visibilityState==="visible"&&!busy)load();syncLine();},POLL_MS);
+ setInterval(function(){if(pending&&!editing()){pending=false;render();}},3000);
+ document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")load();});
+}
+window.__trip={load:load,state:function(){return state;}}; /* for the local test */
 })();
 </script>
 </body>
