@@ -9,7 +9,11 @@
 <meta name="trip-api" content="https://road-trip-planner.sloanescott16.workers.dev">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://road-trip-planner.sloanescott16.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>Road Trip Planner: Texas to New Mexico Loop</title>
-<meta name="description" content="A no-backtracking road trip loop: Dallas, Lubbock, White Sands, hot springs, Albuquerque, Santa Fe, Red River.">
+<meta name="description" content="A no-backtracking road trip loop: Dallas, Lubbock, White Sands, hot springs, Albuquerque, Santa Fe, Red River and home to Dallas.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://tile.openstreetmap.org">
+<link rel="preconnect" href="https://road-trip-planner.sloanescott16.workers.dev">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 :root{--bg:#fbf4e8;--card:#fffaf1;--ink:#3a2c20;--muted:#7a6753;--accent:#b5522b;--line:#e8d8bd;--warn:#a3341c;}
@@ -47,6 +51,7 @@ footer{margin-top:20px;border-top:1px solid var(--line);padding-top:14px}
 .pin-ws{background:#2f6f8f;border:2px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .pin-n{background:#b5522b;color:#fff;border:2px solid #fff;border-radius:50%;width:26px;height:26px;text-align:center;line-height:22px;font-weight:700;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .pin-n.closed{background:#8a8a8a}
+.pin-home{background:#2f6f8f;color:#fff;border:2px solid #fff;border-radius:13px;height:26px;padding:0 8px;line-height:22px;font-weight:700;font-size:13px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 .pin-dot{background:#fffaf1;border:2px solid #b5522b;border-radius:50%;width:12px;height:12px}
 /* collaborative parts */
 .bar{background:#f3e3c6;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 14px;font-size:.95rem}
@@ -84,10 +89,10 @@ details.add summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6
 </style>
 </head>
 <body>
-<nav aria-label="Jump to a leg"><div class="in"><span>Jump to:</span><a href="#top">Map</a><a href="#decide">Choices</a><a href="#leg1">1 Dallas</a><a href="#leg2">2 Lubbock</a><a href="#leg3">3 White Sands</a><a href="#leg4">4 Albuquerque and Santa Fe</a><a href="#leg5">5 Red River</a><a href="#leg6">6 Home</a></div></nav>
+<nav aria-label="Jump to a leg"><div class="in"><span>Jump to:</span><a href="#top">Map</a><a href="#decide">Choices</a><a href="#leg1">1 Dallas</a><a href="#leg2">2 Lubbock</a><a href="#leg3">3 White Sands</a><a href="#leg4">4 Albuquerque and Santa Fe</a><a href="#leg5">5 Red River</a><a href="#leg6">6 Home to Dallas</a></div></nav>
 <main>
 <h1 id="top">Road Trip Planner: Texas to New Mexico Loop</h1>
-<p>A loop with no backtracking: Dallas, Lubbock, White Sands and the hot springs, up through New Mexico to Red River, then home to Texas. Add stops, places to stay, food, ideas, notes and links to any leg, and vote on the choices.</p>
+<p>A loop with no backtracking: Dallas, Lubbock, White Sands and the hot springs, up through New Mexico to Red River, then the drive home to Dallas to close the loop. Add stops, places to stay, food, ideas, notes and links to any leg, and vote on the choices.</p>
 
 <div class="bar" id="bar">
  <div id="ro-line" hidden>This is the read-only plan. Ask for the trip link to add things and vote.</div>
@@ -102,7 +107,7 @@ details.add summary{cursor:pointer;font-weight:600;color:var(--accent);padding:6
 
 
 <div id="overview" class="map" role="region" aria-label="Map of the whole route"></div>
-<p class="note">The route line is approximate, not the road. The small hollow dots are the start in Conroe and the hot springs town on the way up through New Mexico.</p>
+<p class="note">The route line is approximate, not the road. The small hollow dots are the start in Conroe and the hot springs town on the way up through New Mexico. The Home pin is Dallas, where the loop closes.</p>
 <noscript><p class="note">The map and leg cards need JavaScript.</p></noscript>
 
 <section class="leg" id="decide">
@@ -214,12 +219,12 @@ var LEGS = [
    place:"Albuquerque, NM", from:"Truth or Consequences, NM", fromLabel:"Driving from Truth or Consequences",
    extra:{ place:"Santa Fe, NM", from:"Albuquerque, NM", label:"Santa Fe", fromLabel:"Driving from Albuquerque to Santa Fe", ll:[35.6876096,-105.938456] }, },
  { id:"leg5", n:5, title:"Red River, NM", ll:[36.7094826,-105.407563],
-   what:"Our family base and the usual hub. We stay at a family condo here.",
-   place:"Red River, NM", from:"Santa Fe, NM", fromLabel:"Driving from Santa Fe",
-   base:"Base: the family condo." },
- { id:"leg6", n:6, title:"Home to Texas", ll:null,
-   what:"The drive home to Texas. Where we finish is one of the choices below.",
-   place:null, from:null, }
+   what:"A stop on the loop in the mountains of northern New Mexico, the last one before we turn for home.",
+   place:"Red River, NM", from:"Santa Fe, NM", fromLabel:"Driving from Santa Fe", },
+ { id:"leg6", n:6, title:"Home: Red River to Dallas", ll:[32.7762719,-96.7968559], home:true,
+   what:"The final leg closes the loop: from Red River back across to Texas and home to Dallas. About 12 hours, a drive we have done many times. From Dallas, Clayton carries on home to Conroe, TX.",
+   place:"Dallas, TX", from:"Red River, NM", fromLabel:"Driving from Red River to Dallas",
+   onward:{ from:"Dallas, TX", place:"Conroe, TX", label:"Then Dallas to Conroe" } }
 ];
 /* WAYPOINTS: small unnumbered dots on the route line. */
 var START_EXTRA = { name:"Conroe, TX (start)", ll:[30.3118769,-95.4560512] };
@@ -247,6 +252,7 @@ LEGS.forEach(function(L){
  if(L.extra){
   h+='<div class="links"><a class="btn" href="'+am(L.extra.place)+'">Apple Maps: '+esc(L.extra.label)+'</a><a class="btn alt" href="'+drive(L.extra.from,L.extra.place)+'">'+esc(L.extra.fromLabel)+'</a></div>';
  }
+ if(L.onward){h+='<div class="links"><a class="btn alt" href="'+drive(L.onward.from,L.onward.place)+'">'+esc(L.onward.label)+'</a></div>';}
  if(L.base){h+='<p class="base">'+esc(L.base)+'</p>';}
  h+='<div class="plan" id="plan-'+L.id+'"></div>';
  s.innerHTML=h;
@@ -281,6 +287,11 @@ L.polyline([START_EXTRA.ll,LEGS[0].ll],{color:"#b5522b",weight:3,opacity:.7,dash
 all.push(START_EXTRA.ll);
 LEGS.forEach(function(g){
  if(!g.ll)return;
+ if(g.home){ /* home pin sits just below and left of pin 1 in Dallas so both show; the line closes the loop */
+  var hi=L.divIcon({className:"",html:'<div class="pin-home">'+g.n+' Home</div>',iconSize:[70,26],iconAnchor:[68,-14],popupAnchor:[-33,14]});
+  L.marker(g.ll,{icon:hi,title:"Home: Dallas, TX",zIndexOffset:500}).addTo(om).bindPopup(popup("Home: Dallas, TX",am(g.place)));
+  path.push(g.ll);all.push(g.ll);return;
+ }
  numPin(g.n,g.ll,g.title,am(g.place));
  path.push(g.ll);all.push(g.ll);
  if(g.n===3){path.push(TOC.ll);dot(TOC.ll,TOC.name);all.push(TOC.ll);}
@@ -290,6 +301,7 @@ LEGS.forEach(function(g){
 });
 L.polyline(path,{color:"#b5522b",weight:3,opacity:.8}).addTo(om);
 om.fitBounds(all,{padding:[24,24]});
+window.__route=path.slice(); /* for the local test: the route line, start to home */
 
 /* ---- hot springs map ---- */
 var places=[
@@ -484,6 +496,7 @@ function choiceCard(d,c){
  var opts=d.options.filter(function(o){return o.choice===c.id;});
  var dec=opts.filter(function(o){return o.id===c.decided;})[0];
  var box=el("div",{cls:"ch",id:"choice-"+c.id},[el("h4",{},[c.title,dec?el("span",{cls:"badge",text:"Decided: "+dec.label}):null])]);
+ if(c.id==="seed-end")box.appendChild(el("p",{cls:"base loop-end",text:"The loop ends at home: back to Dallas, with Clayton carrying on to Conroe."}));
  if(!opts.length)box.appendChild(el("p",{cls:"tbd",text:"No options yet. Add one below."}));
  opts.forEach(function(o){
   var isDec=o.id===c.decided;
